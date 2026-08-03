@@ -50,6 +50,23 @@ pub enum AdcRange {
     Range40mV,
 }
 
+pub enum Mode {
+    Shutdown = 0x0,
+    TriggeredBus = 0x1,
+    TriggeredShunt = 0x2,
+    TriggeredBusShunt = 0x3,
+    TriggeredTemp = 0x4,
+    TriggeredTempBus = 0x5,
+    TriggeredTempShunt = 0x6,
+    TriggeredAll = 0x7,
+    ContinuousBus = 0x9,
+    ContinuousShunt = 0xA,
+    ContinuousBusShunt = 0xB,
+    ContinuousTemp = 0xC,
+    ContinuousTempBus = 0xD,
+    ContinuousTempShunt = 0xE,
+    ContinuousAll = 0xF,
+}
 pub enum Time {
     Ct50,
     Ct84,
@@ -149,13 +166,13 @@ where
     /// ADC configuration, conversion times can be configured using this method.
     pub fn set_adc_config(
         &mut self,
-        mode: u16,
+        mode: Mode,
         busvolt_ct: Time,
         shuntvolt_ct: Time,
         temperature_ct: Time,
         adc_avgcount: u8,
     ) -> Result<(), Error<I2C::Error>> {
-        let value = mode << 12
+        let value = (mode as u16) << 12
             | (busvolt_ct as u16) << 9
             | (shuntvolt_ct as u16) << 6
             | (temperature_ct as u16) << 3
@@ -174,7 +191,7 @@ where
         self.shunt_resistance = shunt_resistance;
         self.write_shunt_calibrate(self.current_lsb, self.shunt_resistance)
     }
-    
+
     /// Shunt voltage measurement, returns the shunt voltage in volts.
     pub fn shunt_voltage(&mut self) -> Result<f32, Error<I2C::Error>> {
         let raw_value: i16 = self.read_i16(Register::VSHUNT)?;
@@ -205,7 +222,7 @@ where
         let raw_value = self.read_i24(Register::POWER)?;
         Ok(raw_value as f32 * 0.2 * self.current_lsb)
     }
-    
+
     ///---- Private functions ----
 
     /// Conversion factor for the ADC based on the configuration register.
@@ -213,9 +230,9 @@ where
     fn adc_conv_factor(&mut self) -> Result<u16, Error<I2C::Error>> {
         let adc_range_bit = ((self.read_u16(Register::CONFIG)? >> 1) & 1) != 0;
         let conv_factor = if adc_range_bit {
-            1  // 1.25uV per bit for 40mV range
+            1 // 1.25uV per bit for 40mV range
         } else {
-            4  // 5uV per bit for 163mV range -> 1.25uV x 4 = 5uV
+            4 // 5uV per bit for 163mV range -> 1.25uV x 4 = 5uV
         };
         Ok(conv_factor)
     }
@@ -230,7 +247,6 @@ where
         let shunt_cal: f32 = 819.2e6 * current_lsb * shunt_resistance_ohms * conv_factor as f32;
         self.write_u16(Register::SHUNT_CAL, shunt_cal as u16)
     }
-
 
     ///-----I2C helper functions -----
 
