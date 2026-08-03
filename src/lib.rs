@@ -5,7 +5,7 @@
 //! This driver is designed to work with the `embedded-hal` traits, making it compatible with a wide range of microcontrollers and platforms.
 //! More about the embedded-hal: https://github.com/rust-embedded/embedded-hal
 //!
-//! Todo : Feature complete implementation of the INA238 driver, including configuration, reading measurements, and handling alerts.
+//! Todo : Feature complete implementation of the INA238 driver, threshold configuration and handling alerts.
 
 use embedded_hal::i2c::I2c;
 
@@ -135,6 +135,11 @@ where
         Self::new(i2c, Address::AddrA1gndA0gnd)
     }
 
+    /// Returns the I2C address of the INA238 sensor
+    pub fn address(&self) -> Address {
+        self.address
+    }
+
     /// Returns the manufacturer ID of the sensor
     pub fn manufacture_id(&mut self) -> Result<u16, Error<I2C::Error>> {
         self.read_u16(Register::MANUFACTURER_ID)
@@ -186,7 +191,7 @@ where
 
     /// Sets the shunt calibration value, which is used to calculate the current and power measurements.
     /// Note: The calibration value should be calculated based on the shunt resistor value and the desired current range. RSHUNT < (VSENSE_MAX/I_MAX)
-    pub fn shunt_calibrate(
+    pub fn set_shunt_calibrate(
         &mut self,
         max_current_a: f32,
         shunt_resistance: f32,
