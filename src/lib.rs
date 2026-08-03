@@ -118,6 +118,10 @@ where
 {
     /// Creates a new INA238 driver instance
     pub fn new(i2c: I2C, address: Address) -> Self {
+        assert!(
+            0x40 <= address.as_u8() && address.as_u8() <= 0x4F,
+            "Invalid I2C address for INA238 (0x40 to 0x4F are valid)"
+        );
         Self {
             i2c,
             address,
