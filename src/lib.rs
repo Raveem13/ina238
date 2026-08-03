@@ -90,7 +90,7 @@ impl Register {
 pub struct INA238<I2C> {
     i2c: I2C,
     address: Address,
-    current_lsb: f32, // Current LSB value in amperes
+    current_lsb: f32,      // Current LSB value in amperes
     shunt_resistance: f32, // Shunt resistance in ohms
 }
 
@@ -101,7 +101,12 @@ where
 {
     /// Creates a new INA238 driver instance
     pub fn new(i2c: I2C, address: Address) -> Self {
-        Self { i2c, address, current_lsb: 0.0, shunt_resistance: 0.0 }
+        Self {
+            i2c,
+            address,
+            current_lsb: 0.0,
+            shunt_resistance: 0.0,
+        }
     }
 
     /// Default initialization of the INA238 sensor
@@ -160,17 +165,22 @@ where
 
     /// Sets the shunt calibration value, which is used to calculate the current and power measurements.
     /// Note: The calibration value should be calculated based on the shunt resistor value and the desired current range. RSHUNT < (VSENSE_MAX/I_MAX)
-    pub fn shunt_calibration(&mut self) -> Result<(), Error<I2C::Error>> {
-        let value: f32 = 819.2e6 * self.current_lsb * self.shunt_resistance;
-        self.write_u16(Register::SHUNT_CAL, value as u16)
+    pub fn shunt_calibrate(
+        &mut self,
+        max_current_a: f32,
+        shunt_resistance: f32,
+    ) -> Result<(), Error<I2C::Error>> {
+        self.current_lsb = max_current_a / 32768.0;
+        self.shunt_resistance = shunt_resistance;
+        self.write_shunt_calibrate(self.current_lsb, self.shunt_resistance)
     }
-
+    
     /// Shunt voltage measurement, returns the shunt voltage in volts.
     pub fn shunt_voltage(&mut self) -> Result<f32, Error<I2C::Error>> {
         let raw_value: i16 = self.read_i16(Register::VSHUNT)?;
 
         let conv_factor = self.adc_conv_factor()?;
-        Ok((raw_value as f32) * conv_factor)
+        Ok((raw_value as f32) * conv_factor as f32 * 1.25e-6)
     }
 
     /// Bus voltage measurement, returns the bus voltage in volts.
@@ -187,39 +197,42 @@ where
 
     /// Current measurement, returns the current in amperes.
     pub fn current(&mut self) -> Result<f32, Error<I2C::Error>> {
-        let raw_value = self.read_i16(Register::CURRENT)?   ;
+        let raw_value = self.read_i16(Register::CURRENT)?;
         Ok(raw_value as f32 * self.current_lsb)
     }
     /// Power measurement, returns the power in watts.
     pub fn power(&mut self) -> Result<f32, Error<I2C::Error>> {
-        let raw_value = self.read_i24(Register::POWER)?   ;
+        let raw_value = self.read_i24(Register::POWER)?;
         Ok(raw_value as f32 * 0.2 * self.current_lsb)
     }
-    /// Read the current value power
-    // pub fn read_power_c(&mut self) -> Result<f32, Error<I2C::Error>> {
-    //     let mut rx_buf = [0u8; 2];
+    
+    ///---- Private functions ----
 
-    //     /// Read the power register (0x08) from the INA238 sensor
-    //     match self
-    //         .i2c
-    //         .write_read(self.address.as_u8(), &[Register::POWER], &mut rx_buf)
-    //     {
-    //         Ok(()) => Ok(self.bits_to_watt(rx_buf)),
-    //         Err(e) => Err(Error::Communication(e)),
-    //     }
-    // }
-
-    //-----I2C helper functions -----
-
-    fn adc_conv_factor(&mut self) -> Result<f32, Error<I2C::Error>> {
+    /// Conversion factor for the ADC based on the configuration register.
+    /// Returns 1 for 40mV range (1.25uV per bit) and 4 for 163mV range (5uV per bit).
+    fn adc_conv_factor(&mut self) -> Result<u16, Error<I2C::Error>> {
         let adc_range_bit = ((self.read_u16(Register::CONFIG)? >> 1) & 1) != 0;
         let conv_factor = if adc_range_bit {
-                        1.25e-6 // 1.25uV per bit for 40mV range
-                    } else {
-                        5e-6 // 5uV per bit for 163mV range
-                    };
+            1  // 1.25uV per bit for 40mV range
+        } else {
+            4  // 5uV per bit for 163mV range -> 1.25uV x 4 = 5uV
+        };
         Ok(conv_factor)
     }
+
+    /// Calculates and writes the shunt calibration value to the sensor.
+    fn write_shunt_calibrate(
+        &mut self,
+        current_lsb: f32,
+        shunt_resistance_ohms: f32,
+    ) -> Result<(), Error<I2C::Error>> {
+        let conv_factor = self.adc_conv_factor()?;
+        let shunt_cal: f32 = 819.2e6 * current_lsb * shunt_resistance_ohms * conv_factor as f32;
+        self.write_u16(Register::SHUNT_CAL, shunt_cal as u16)
+    }
+
+
+    ///-----I2C helper functions -----
 
     fn read_u16(&mut self, reg: u8) -> Result<u16, Error<I2C::Error>> {
         let mut buf = [0u8; 2];
