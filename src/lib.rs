@@ -233,7 +233,7 @@ where
     }
 
     ///---- Private functions ----
-
+    ///
     /// Conversion factor for the ADC based on the configuration register.
     /// Returns 1 for 40mV range (1.25uV per bit) and 4 for 163mV range (5uV per bit).
     fn adc_conv_factor(&mut self) -> Result<u16, Error<I2C::Error>> {
@@ -258,7 +258,7 @@ where
     }
 
     ///-----I2C helper functions -----
-
+    //
     fn read_u16(&mut self, reg: u8) -> Result<u16, Error<I2C::Error>> {
         let mut buf = [0u8; 2];
         match self.i2c.write_read(self.address.as_u8(), &[reg], &mut buf) {
