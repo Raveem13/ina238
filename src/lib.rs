@@ -78,6 +78,17 @@ pub enum Time {
     Ct4120,
 }
 
+pub enum Count {
+    AvgN1 = 0,
+    AvgN4 = 1,
+    AvgN16 = 2,
+    AvgN64 = 3,
+    AvgN128 = 4,
+    AvgN256 = 5,
+    AvgN512 = 6,
+    AvgN1024 = 7,
+}
+
 #[allow(dead_code)]
 struct Register;
 
@@ -109,6 +120,7 @@ pub struct INA238<I2C> {
     address: Address,
     current_lsb: f32,      // Current LSB value in amperes
     shunt_resistance: f32, // Shunt resistance in ohms
+    adc_range: AdcRange,
 }
 
 /// Methods for the INA238 driver
@@ -127,6 +139,7 @@ where
             address,
             current_lsb: 0.0,
             shunt_resistance: 0.0,
+            adc_range: AdcRange::Range40mV,
         }
     }
 
@@ -161,11 +174,11 @@ where
     /// Configures the INA238 sensor
     pub fn set_config(
         &mut self,
-        conv_delay: u16,
-        range: AdcRange,
+        conv_delay_ms: u8,
+        adc_range: AdcRange,
     ) -> Result<(), Error<I2C::Error>> {
-        let mut value = (conv_delay / 2) << 6;
-        value = match range {
+        let mut value = (conv_delay_ms as u16 / 2) << 6;
+        value = match adc_range {
             AdcRange::Range40mV => value | (1 << 4),
             AdcRange::Range163mV => value & !(1 << 4),
         };
@@ -179,7 +192,7 @@ where
         busvolt_ct: Time,
         shuntvolt_ct: Time,
         temperature_ct: Time,
-        adc_avgcount: u8,
+        adc_avgcount: Count,
     ) -> Result<(), Error<I2C::Error>> {
         let value = (mode as u16) << 12
             | (busvolt_ct as u16) << 9
@@ -232,7 +245,6 @@ where
         Ok(raw_value as f32 * 0.2 * self.current_lsb)
     }
 
-    
     ///Threshold registers write & read
     /// Set Shunt overvoltage threshold in volts
     pub fn set_shunt_overvoltage_th(&mut self, voltage_v: f32) -> Result<(), Error<I2C::Error>> {
@@ -278,11 +290,9 @@ where
     /// Conversion factor for the ADC based on the configuration register.
     /// Returns 1 for 40mV range (1.25uV per bit) and 4 for 163mV range (5uV per bit).
     fn adc_conv_factor(&mut self) -> Result<u16, Error<I2C::Error>> {
-        let adc_range_bit = ((self.read_u16(Register::CONFIG)? >> 1) & 1) != 0;
-        let conv_factor = if adc_range_bit {
-            1 // 1.25uV per bit for 40mV range
-        } else {
-            4 // 5uV per bit for 163mV range -> 1.25uV x 4 = 5uV
+        let conv_factor = match self.adc_range {
+            AdcRange::Range40mV => 1,  // 1.25uV per bit for 40mV range
+            AdcRange::Range163mV => 4, // 5uV per bit for 163mV range -> 1.25uV x 4 = 5uV
         };
         Ok(conv_factor)
     }
