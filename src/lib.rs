@@ -232,6 +232,47 @@ where
         Ok(raw_value as f32 * 0.2 * self.current_lsb)
     }
 
+    
+    ///Threshold registers write & read
+    /// Set Shunt overvoltage threshold in volts
+    pub fn set_shunt_overvoltage_th(&mut self, voltage_v: f32) -> Result<(), Error<I2C::Error>> {
+        let conv_factor = 1.25e-6 * (self.adc_conv_factor()?) as f32;
+        let raw_value = (voltage_v / conv_factor) as i16;
+        self.write_u16(Register::SOVL, raw_value as u16)
+    }
+
+    /// Set Shunt undervoltage threshold in volts
+    pub fn set_shunt_undervoltage_th(&mut self, voltage_v: f32) -> Result<(), Error<I2C::Error>> {
+        let conv_factor = 1.25e-6 * (self.adc_conv_factor()?) as f32;
+        let raw_value = (voltage_v / conv_factor) as i16;
+        self.write_u16(Register::SUVL, raw_value as u16)
+    }
+
+    /// Set Bus overvoltage threshold in volts
+    pub fn set_bus_overvoltage_th(&mut self, voltage_v: f32) -> Result<(), Error<I2C::Error>> {
+        let raw_value = (voltage_v / 3.125e-3) as u16;
+        self.write_u16(Register::BOVL, raw_value)
+    }
+
+    /// Set Bus undervoltage threshold in volts
+    pub fn set_bus_undervoltage_th(&mut self, voltage_v: f32) -> Result<(), Error<I2C::Error>> {
+        let raw_value = (voltage_v / 3.125e-3) as u16;
+        self.write_u16(Register::BUVL, raw_value)
+    }
+
+    /// Sets temperature over limit in Celcius
+    pub fn set_temperature_limit(&mut self, temp_c: f32) -> Result<(), Error<I2C::Error>> {
+        let raw_value = (temp_c / 125e-3) as i16;
+        self.write_u16(Register::TEMP_LIMIT, (raw_value as u16) << 4)
+    }
+
+    /// Sets power over limit threshold in Watts
+    pub fn set_power_limit(&mut self, power_w: f32) -> Result<(), Error<I2C::Error>> {
+        let power_lsb = self.current_lsb * 0.2;
+        let raw_value = (power_w / (256.0 * power_lsb)) as u16;
+        self.write_u16(Register::TEMP_LIMIT, raw_value)
+    }
+
     ///---- Private functions ----
 
     /// Conversion factor for the ADC based on the configuration register.
