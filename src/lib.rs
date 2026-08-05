@@ -275,14 +275,14 @@ where
     /// Sets temperature over limit in Celcius
     pub fn set_temperature_limit(&mut self, temp_c: f32) -> Result<(), Error<I2C::Error>> {
         let raw_value = (temp_c / 125e-3) as i16;
-        self.write_u16(Register::TEMP_LIMIT, (raw_value as u16) << 4)
+        self.write_u16(Register::TEMP_LIMIT, (raw_value << 4) as u16)
     }
 
     /// Sets power over limit threshold in Watts
     pub fn set_power_limit(&mut self, power_w: f32) -> Result<(), Error<I2C::Error>> {
         let power_lsb = self.current_lsb * 0.2;
         let raw_value = (power_w / (256.0 * power_lsb)) as u16;
-        self.write_u16(Register::TEMP_LIMIT, raw_value)
+        self.write_u16(Register::PWR_LIMIT, raw_value)
     }
 
     ///---- Private functions ----

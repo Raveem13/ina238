@@ -180,6 +180,40 @@ mod tests {
         i2c.done();
     }
 
+    // Tests temperature over-limit threshold
+    #[test]
+    fn test_temp_overlimit() {
+        // -0x800 (-2048) * 125mC = -256
+        let neg_val = exp_temp_th(-256.1) as u16;
+
+        // 0x7FF (2047) * 125mC = 255.8
+        let pos_val = exp_temp_th(255.8) as u16;
+
+        let expectations = [write_txn(0x10, neg_val), write_txn(0x10, pos_val)];
+        let mut i2c = I2cMock::new(&expectations);
+        let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
+        ina.set_temperature_limit(-256.1).unwrap();
+        ina.set_temperature_limit(255.8).unwrap();
+        i2c.done();
+    }
+
+    // Tests Power over-limit threshold
+    #[test]
+    fn test_power_overlimit() {
+        let shunt_cal = exp_shunt_cal(10.0, 0.01, false);
+        let current_lsb = 10.0 / 32_768.0;
+        let power_lsb = 0.2 * current_lsb;
+
+        // 0xFFFF (65535) * 256 * 0.2 * curr_lsb = 1023.
+        let exp_val = (1000.0 / (256.0 * power_lsb)) as u16;
+
+        let mut i2c = I2cMock::new(&[write_txn(0x02, shunt_cal), write_txn(0x11, exp_val)]);
+        let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
+        ina.set_shunt_calibrate(10.0, 0.01).unwrap();
+        ina.set_power_limit(1000.0).unwrap();
+        i2c.done();
+    }
+
     // ---- Helper functions ----
     fn read_txn(reg: u8, bytes: &[u8]) -> I2cTransaction {
         I2cTransaction::write_read(DEFAULT_ADDRESS as u8, vec![reg], bytes.to_vec())
@@ -234,7 +268,11 @@ mod tests {
         if adc_range {
             shunt_volt *= 4.0;
         }
-        println!("The value is: {:#x}", shunt_volt as u16);
         shunt_volt as i16
+    }
+
+    // Temperature limit expected value
+    fn exp_temp_th(temp_c: f32) -> i16 {
+        ((temp_c / 125e-3) as i16) << 4
     }
 }
