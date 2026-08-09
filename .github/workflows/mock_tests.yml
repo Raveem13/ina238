@@ -1,0 +1,41 @@
+name: Mock Tests
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Run Unit & Mock Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Run Unit & Mock Tests
+        run: cargo test --verbose
+
+      - name: Check #![no_std] Bare-Metal Compilation
+        run: |
+          rustup target add thumbv7em-none-eabihf
+          cargo check --target thumbv7em-none-eabihf
+
+      - name: Run Clippy (Linter)
+        run: cargo clippy -- -D warnings
+
+      - name: Check Formatting
+        run: cargo fmt --check
+
+      - name: Formatting as per community rules
+        run: cargo fmt
