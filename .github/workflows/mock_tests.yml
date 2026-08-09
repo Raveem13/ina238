@@ -42,3 +42,7 @@ jobs:
     #     run: |
     #       rustup target add thumbv7em-none-eabihf
     #       cargo check --target thumbv7em-none-eabihf
+
+      - name: Remove artifacts from the target
+        run: cargo clean --verbose
+
