@@ -2,7 +2,7 @@ name: Mock Tests
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "ina238-mock-test" ]
   pull_request:
     branches: [ "main", "master" ]
 
