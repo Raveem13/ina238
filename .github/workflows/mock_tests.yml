@@ -23,19 +23,22 @@ jobs:
         with:
           components: clippy, rustfmt
 
-      - name: Run Unit & Mock Tests
-        run: cargo test --verbose
-
-      - name: Check #![no_std] Bare-Metal Compilation
-        run: |
-          rustup target add thumbv7em-none-eabihf
-          cargo check --target thumbv7em-none-eabihf
-
-      - name: Run Clippy (Linter)
-        run: cargo clippy -- -D warnings
-
       - name: Check Formatting
         run: cargo fmt --check
 
       - name: Formatting as per community rules
         run: cargo fmt
+
+      - name: Run Clippy [Compilation(cargo check) + Linter]
+        run: cargo clippy -- -D warnings
+
+      - name: Run Unit & Mock Tests
+        run: cargo test --verbose
+
+    #   - name: Build target
+    #     run: cargo build
+        
+    #   - name: Check #![no_std] Bare-Metal Compilation
+    #     run: |
+    #       rustup target add thumbv7em-none-eabihf
+    #       cargo check --target thumbv7em-none-eabihf
