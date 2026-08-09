@@ -253,11 +253,25 @@ where
         self.write_u16(Register::SOVL, raw_value as u16)
     }
 
+    /// Get Shunt overvoltage threshold in volts
+    pub fn get_shunt_overvoltage_th(&mut self) -> Result<f32, Error<I2C::Error>> {
+        let raw_value = self.read_u16(Register::SOVL)? as f32;
+        let conv_factor = 1.25e-6 * (self.adc_conv_factor()?) as f32;
+        Ok(raw_value * conv_factor)
+    }
+
     /// Set Shunt undervoltage threshold in volts
     pub fn set_shunt_undervoltage_th(&mut self, voltage_v: f32) -> Result<(), Error<I2C::Error>> {
         let conv_factor = 1.25e-6 * (self.adc_conv_factor()?) as f32;
         let raw_value = (voltage_v / conv_factor) as i16;
         self.write_u16(Register::SUVL, raw_value as u16)
+    }
+
+    /// Get Shunt undervoltage threshold in volts
+    pub fn get_shunt_undervoltage_th(&mut self) -> Result<f32, Error<I2C::Error>> {
+        let raw_value = self.read_u16(Register::SUVL)? as f32;
+        let conv_factor = 1.25e-6 * (self.adc_conv_factor()?) as f32;
+        Ok(raw_value * conv_factor)
     }
 
     /// Set Bus overvoltage threshold in volts
@@ -266,10 +280,22 @@ where
         self.write_u16(Register::BOVL, raw_value)
     }
 
+    /// Get Bus undervoltage threashold in volts
+    pub fn get_bus_overvoltage_th(&mut self) -> Result<f32, Error<I2C::Error>> {
+        let raw_value = self.read_u16(Register::BOVL)? as f32;
+        Ok(raw_value * 3.125e-3)
+    }
+
     /// Set Bus undervoltage threshold in volts
     pub fn set_bus_undervoltage_th(&mut self, voltage_v: f32) -> Result<(), Error<I2C::Error>> {
         let raw_value = (voltage_v / 3.125e-3) as u16;
         self.write_u16(Register::BUVL, raw_value)
+    }
+
+    /// Get Bus undervoltage threashold in volts
+    pub fn get_bus_undervoltage_th(&mut self) -> Result<f32, Error<I2C::Error>> {
+        let raw_value = self.read_u16(Register::BUVL)? as f32;
+        Ok(raw_value * 3.125e-3)
     }
 
     /// Sets temperature over limit in Celcius
@@ -278,11 +304,24 @@ where
         self.write_u16(Register::TEMP_LIMIT, (raw_value << 4) as u16)
     }
 
+    /// Gets temperature over limit in Celcius
+    pub fn get_temperature_limit(&mut self) -> Result<f32, Error<I2C::Error>> {
+        let raw_value = self.read_u16(Register::TEMP_LIMIT)? as f32;
+        Ok(raw_value * 125e-3)
+    }
+
     /// Sets power over limit threshold in Watts
     pub fn set_power_limit(&mut self, power_w: f32) -> Result<(), Error<I2C::Error>> {
         let power_lsb = self.current_lsb * 0.2;
         let raw_value = (power_w / (256.0 * power_lsb)) as u16;
         self.write_u16(Register::PWR_LIMIT, raw_value)
+    }
+
+    /// Gets power over limit threshold in Watts
+    pub fn get_power_limit(&mut self) -> Result<f32, Error<I2C::Error>> {
+        let raw_value = self.read_u16(Register::PWR_LIMIT)? as f32;
+        let power_lsb = self.current_lsb * 0.2;
+        Ok(raw_value * 256.0 * power_lsb)
     }
 
     ///---- Private functions ----
