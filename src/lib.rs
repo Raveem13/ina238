@@ -116,13 +116,13 @@ impl Register {
 #[allow(dead_code)]
 pub struct AlertConfig {
     // Alert Flag bit remain active following a fault until the DIAG_ALRT Register has been read
-    alert_latch: bool, // 0h = Transparent, 1h = Latched
+    pub alert_latch: bool, // 0h = Transparent, 1h = Latched
     // configures the Alert pin to be asserted when the Conversion Ready Flag (bit 1) is asserted
-    conversion_ready: bool, // 0h = Disable, 1h = Enable conversion ready
+    pub conversion_ready: bool, // 0h = Disable, 1h = Enable conversion ready
     // delay the ALERT until after the averaged value.
-    slow_alert: bool, // 0h = ALERT comparison on non-averaged (ADC) value, 1h = ALERT comparison on averaged value
+    pub slow_alert: bool, // 0h = ALERT comparison on non-averaged (ADC) value, 1h = ALERT comparison on averaged value
     // Alert pin polarity
-    alert_polarity: bool, // 0h = Normal (Active-low, open-drain), 1h = Inverted (active-high, open-drain )
+    pub alert_polarity: bool, // 0h = Normal (Active-low, open-drain), 1h = Inverted (active-high, open-drain )
 }
 
 /// INA238 sensor driver
@@ -355,13 +355,13 @@ where
         if cfg.alert_latch {
             alert_value |= 1 << 15;
         }
-        if cfg.alert_latch {
+        if cfg.conversion_ready {
             alert_value |= 1 << 14;
         }
-        if cfg.alert_latch {
+        if cfg.slow_alert {
             alert_value |= 1 << 13;
         }
-        if cfg.alert_latch {
+        if cfg.alert_polarity {
             alert_value |= 1 << 12;
         }
         self.write_u16(Register::DIAG_ALRT, alert_value)

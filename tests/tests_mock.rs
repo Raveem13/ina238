@@ -348,6 +348,35 @@ mod tests {
         i2c.done();
     }
 
+    // Test Diagnostic Flags read
+    #[test]
+    fn test_diag_flags() {
+        let mut i2c = I2cMock::new(&[read_txn(0xB, &0xFFFF_u16.to_be_bytes())]);
+        let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
+        let val = ina.diagnostic_flags().unwrap();
+        // Check reserved bits b[11-10, 8] are zero
+        debug_assert_eq!(val & 0x0D00, 0, "Reserved bits are not zero");
+        i2c.done();
+    }
+
+    // Test alert pin configuration
+    #[test]
+    fn test_alert_config() {
+        let mut i2c = I2cMock::new(&[
+            read_txn(0xB, &0x0FFF_u16.to_be_bytes()),
+            write_txn(0xB, 0xE2FF),
+        ]);
+        let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
+        ina.config_alerts(AlertConfig {
+            alert_latch: true,
+            conversion_ready: true,
+            slow_alert: true,
+            alert_polarity: false,
+        })
+        .unwrap();
+        i2c.done();
+    }
+
     // ---- Helper functions ----
     fn read_txn(reg: u8, bytes: &[u8]) -> I2cTransaction {
         I2cTransaction::write_read(DEFAULT_ADDRESS as u8, vec![reg], bytes.to_vec())
