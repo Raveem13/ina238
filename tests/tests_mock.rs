@@ -183,12 +183,13 @@ mod tests {
         let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
         let p_val = ina.get_shunt_undervoltage_th().unwrap();
         let n_val = ina.get_shunt_undervoltage_th().unwrap();
-        debug_assert!(p_val >= 0.0, "Expected positive value");
-        debug_assert!(n_val < 0.0, "Expected negative value");
+        debug_assert!(p_val >= 0.0, "Expected positive value, got {}", p_val);
+        debug_assert!(n_val < 0.0, "Expected negative value, got {}", n_val);
         i2c.done();
     }
 
     // Test Bus overvoltage threshold
+    // Set method
     #[test]
     fn test_bus_overvolt() {
         // 0x7FFF (32727) * 3.125mv = 102.2 V
@@ -199,7 +200,30 @@ mod tests {
         i2c.done();
     }
 
+    // get method
+    #[test]
+    fn test_get_bus_overvoltage() {
+        // 0x7FFF (Reserved bit = 0)
+        // 0xFFFF (Reserved bit = 1)
+        let mut i2c = I2cMock::new(&[
+            read_txn(0x0E, &0x7FFF_u16.to_be_bytes()),
+            read_txn(0x0E, &0xFFFF_u16.to_be_bytes()),
+        ]);
+
+        let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
+
+        let val_res_zero = ina.get_bus_overvoltage_th().unwrap();
+        let val_res_one = ina.get_bus_overvoltage_th().unwrap();
+
+        // Assert that the reserved bit (MSB) was masked off and read as '0' only.
+        assert_eq!(val_res_zero, val_res_one, "Reserved bit not zero");
+        assert!(val_res_zero >= 0.0);
+
+        i2c.done(); //
+    }
+
     // Test bus undervoltage threshold
+    // Set method
     #[test]
     fn test_bus_undervolt() {
         // 0x1 * 3.125mv = 0.003 V
@@ -210,7 +234,30 @@ mod tests {
         i2c.done();
     }
 
+    // get method
+    #[test]
+    fn test_get_bus_undervoltage() {
+        // 0x0000 (Reserved bit = 0)
+        // 0x8000 (Reserved bit = 1)
+        let mut i2c = I2cMock::new(&[
+            read_txn(0x0F, &0x0000_u16.to_be_bytes()),
+            read_txn(0x0F, &0x8000_u16.to_be_bytes()),
+        ]);
+
+        let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
+
+        let val_res_zero = ina.get_bus_undervoltage_th().unwrap();
+        let val_res_one = ina.get_bus_undervoltage_th().unwrap();
+
+        // Assert that the reserved bit (MSB) was masked off and read as '0' only.
+        assert_eq!(val_res_zero, val_res_one, "Reserved bit not zero");
+        assert!(val_res_zero >= 0.0);
+
+        i2c.done(); //
+    }
+
     // Tests temperature over-limit threshold
+    // Set method
     #[test]
     fn test_temp_overlimit() {
         // -0x800 (-2048) * 125mC = -256
@@ -227,7 +274,52 @@ mod tests {
         i2c.done();
     }
 
+    // Get method
+    #[test]
+    fn test_get_temp_overlimit() {
+        let mut i2c = I2cMock::new(&[
+            read_txn(0x10, &0x7FF0_u16.to_be_bytes()),
+            read_txn(0x10, &0x8000_u16.to_be_bytes()),
+        ]);
+        let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
+
+        let p_val = ina.get_temperature_limit().unwrap();
+        let n_val = ina.get_temperature_limit().unwrap();
+
+        debug_assert!(p_val >= 0.0, "Expected positive value, got {}", p_val);
+        debug_assert!(n_val < 0.0, "Expected negative value, got {}", n_val);
+
+        // Check temp overlimit value equal to max value = 255.x (approx.)
+        debug_assert!((p_val - 255.0) <= 1.0, "Wrong value");
+        // Check temp overlimit value equal to min value = -256.x (approx.)
+        debug_assert!((n_val - 255.0) <= -1.0, "Wrong value");
+
+        i2c.done();
+    }
+
+    // Tests reserved bits always reads 0
+    #[test]
+    fn test_get_temp_overlimit_reserved_zero() {
+        // 0x7FF0 (Reserved bit[3:0] = 0)
+        // 0x7FFF (Reserved bit[3:0] = 1)
+        let mut i2c = I2cMock::new(&[
+            read_txn(0x10, &0x7FF0_u16.to_be_bytes()),
+            read_txn(0x10, &0x7FFF_u16.to_be_bytes()),
+        ]);
+
+        let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
+
+        let val_res_zero = ina.get_temperature_limit().unwrap();
+        let val_res_one = ina.get_temperature_limit().unwrap();
+
+        // Assert that the lower nibble (reserved bits [3-0]) was read 0h.
+        assert_eq!(val_res_zero, val_res_one, "Reserved bits not zero");
+
+        i2c.done(); //
+    }
+
     // Tests Power over-limit threshold
+    // Set power over-limit
     #[test]
     fn test_power_overlimit() {
         let shunt_cal = exp_shunt_cal(10.0, 0.01, false);
@@ -241,6 +333,18 @@ mod tests {
         let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
         ina.set_shunt_calibrate(10.0, 0.01).unwrap();
         ina.set_power_limit(1000.0).unwrap();
+        i2c.done();
+    }
+
+    // Get power over-limit
+    #[test]
+    fn test_get_power_overlimit() {
+        let mut i2c = I2cMock::new(&[read_txn(0x11, &0xFFFF_u16.to_be_bytes())]);
+        let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
+        let val = ina.get_power_limit().unwrap();
+        debug_assert!(val >= 0.0, "Expected positive value");
+        // Check power value equal to max value = 1023 (approx.)
+        debug_assert!((val - 1023.0) <= 1.0, "Wrong value");
         i2c.done();
     }
 

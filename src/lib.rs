@@ -282,8 +282,10 @@ where
 
     /// Get Bus undervoltage threashold in volts
     pub fn get_bus_overvoltage_th(&mut self) -> Result<f32, Error<I2C::Error>> {
-        let raw_value = self.read_u16(Register::BOVL)? as f32;
-        Ok(raw_value * 3.125e-3)
+        let raw_value = self.read_u16(Register::BOVL)?;
+        // ignore the reserved bit, b[15]
+        let masked_value = (raw_value & 0x7FFF) as f32;
+        Ok(masked_value * 3.125e-3)
     }
 
     /// Set Bus undervoltage threshold in volts
@@ -294,8 +296,10 @@ where
 
     /// Get Bus undervoltage threashold in volts
     pub fn get_bus_undervoltage_th(&mut self) -> Result<f32, Error<I2C::Error>> {
-        let raw_value = self.read_u16(Register::BUVL)? as f32;
-        Ok(raw_value * 3.125e-3)
+        let raw_value = self.read_u16(Register::BUVL)?;
+        // ignore the reserved bit, b[15]
+        let masked_value = (raw_value & 0x7FFF) as f32;
+        Ok(masked_value * 3.125e-3)
     }
 
     /// Sets temperature over limit in Celcius
@@ -306,8 +310,9 @@ where
 
     /// Gets temperature over limit in Celcius
     pub fn get_temperature_limit(&mut self) -> Result<f32, Error<I2C::Error>> {
-        let raw_value = self.read_u16(Register::TEMP_LIMIT)? as f32;
-        Ok(raw_value * 125e-3)
+        let raw_value = self.read_i16(Register::TEMP_LIMIT)?;
+        let shift_val = raw_value >> 4;
+        Ok(shift_val as f32 * 125e-3)
     }
 
     /// Sets power over limit threshold in Watts
