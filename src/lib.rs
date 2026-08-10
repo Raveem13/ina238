@@ -113,6 +113,18 @@ impl Register {
     const DEVICE_ID: u8 = 0x3F;
 }
 
+#[allow(dead_code)]
+pub struct AlertConfig {
+    // Alert Flag bit remain active following a fault until the DIAG_ALRT Register has been read
+    alert_latch: bool, // 0h = Transparent, 1h = Latched
+    // configures the Alert pin to be asserted when the Conversion Ready Flag (bit 1) is asserted
+    conversion_ready: bool, // 0h = Disable, 1h = Enable conversion ready
+    // delay the ALERT until after the averaged value.
+    slow_alert: bool, // 0h = ALERT comparison on non-averaged (ADC) value, 1h = ALERT comparison on averaged value
+    // Alert pin polarity
+    alert_polarity: bool, // 0h = Normal (Active-low, open-drain), 1h = Inverted (active-high, open-drain )
+}
+
 /// INA238 sensor driver
 /// Driver struct
 pub struct INA238<I2C> {
@@ -327,6 +339,32 @@ where
         let raw_value = self.read_u16(Register::PWR_LIMIT)? as f32;
         let power_lsb = self.current_lsb * 0.2;
         Ok(raw_value * 256.0 * power_lsb)
+    }
+
+    /// Reads Diagnostic Flags and Alert (DIAG_ALRT) Register data
+    pub fn diagnostic_flags(&mut self) -> Result<u16, Error<I2C::Error>> {
+        let diag_value = self.read_u16(Register::DIAG_ALRT)?;
+        // Mask reserved bits
+        Ok(diag_value & 0xF2FF)
+    }
+
+    /// Configure alert pins
+    pub fn config_alerts(&mut self, cfg: AlertConfig) -> Result<(), Error<I2C::Error>> {
+        let diag_value = self.read_u16(Register::DIAG_ALRT)?;
+        let mut alert_value = diag_value & 0x02FF;
+        if cfg.alert_latch {
+            alert_value |= 1 << 15;
+        }
+        if cfg.alert_latch {
+            alert_value |= 1 << 14;
+        }
+        if cfg.alert_latch {
+            alert_value |= 1 << 13;
+        }
+        if cfg.alert_latch {
+            alert_value |= 1 << 12;
+        }
+        self.write_u16(Register::DIAG_ALRT, alert_value)
     }
 
     ///---- Private functions ----
