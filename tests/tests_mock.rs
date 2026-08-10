@@ -147,6 +147,21 @@ mod tests {
         i2c.done();
     }
 
+    // Tests get shunt overvoltage threshold
+    #[test]
+    fn test_get_shunt_overvoltage() {
+        let mut i2c = I2cMock::new(&[
+            read_txn(0x0C, &0x7FFF_u16.to_be_bytes()),
+            read_txn(0x0C, &0x8001_u16.to_be_bytes()),
+        ]);
+        let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
+        let p_val = ina.get_shunt_overvoltage_th().unwrap();
+        let n_val = ina.get_shunt_overvoltage_th().unwrap();
+        debug_assert!(p_val >= 0.0, "Expected positive value");
+        debug_assert!(n_val < 0.0, "Expected negative value");
+        i2c.done();
+    }
+
     // Test shunt undervoltage threshold
     #[test]
     fn test_shunt_undervolt() {
@@ -155,6 +170,21 @@ mod tests {
         let mut i2c = I2cMock::new(&[write_txn(0x0D, exp_val)]);
         let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
         ina.set_shunt_undervoltage_th(-0.04).unwrap();
+        i2c.done();
+    }
+
+    // Tests get shunt undervoltage threshold
+    #[test]
+    fn test_get_shunt_undervoltage() {
+        let mut i2c = I2cMock::new(&[
+            read_txn(0x0D, &0x7FFE_u16.to_be_bytes()),
+            read_txn(0x0D, &0x8000_u16.to_be_bytes()),
+        ]);
+        let mut ina = INA238::new(i2c.clone(), DEFAULT_ADDRESS);
+        let p_val = ina.get_shunt_undervoltage_th().unwrap();
+        let n_val = ina.get_shunt_undervoltage_th().unwrap();
+        debug_assert!(p_val >= 0.0, "Expected positive value");
+        debug_assert!(n_val < 0.0, "Expected negative value");
         i2c.done();
     }
 

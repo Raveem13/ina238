@@ -255,7 +255,7 @@ where
 
     /// Get Shunt overvoltage threshold in volts
     pub fn get_shunt_overvoltage_th(&mut self) -> Result<f32, Error<I2C::Error>> {
-        let raw_value = self.read_u16(Register::SOVL)? as f32;
+        let raw_value = self.read_i16(Register::SOVL)? as f32;
         let conv_factor = 1.25e-6 * (self.adc_conv_factor()?) as f32;
         Ok(raw_value * conv_factor)
     }
@@ -269,7 +269,7 @@ where
 
     /// Get Shunt undervoltage threshold in volts
     pub fn get_shunt_undervoltage_th(&mut self) -> Result<f32, Error<I2C::Error>> {
-        let raw_value = self.read_u16(Register::SUVL)? as f32;
+        let raw_value = self.read_i16(Register::SUVL)? as f32;
         let conv_factor = 1.25e-6 * (self.adc_conv_factor()?) as f32;
         Ok(raw_value * conv_factor)
     }
