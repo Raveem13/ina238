@@ -3,9 +3,10 @@
 //! # INA238 driver for embedded-hal
 //! A Rust driver for the INA238 current/voltage/power monitor IC.
 //! This driver is designed to work with the `embedded-hal` traits, making it compatible with a wide range of microcontrollers and platforms.
-//! More about the embedded-hal: https://github.com/rust-embedded/embedded-hal
+//! 
+//! More about the embedded-hal: <https://docs.rs/embedded-hal/latest/embedded_hal/index.html>
 //!
-//! Todo : Feature complete implementation of the INA238 driver, threshold configuration and handling alerts.
+//! More about INA238: <https://www.ti.com/product/INA228>
 
 use embedded_hal::i2c::I2c;
 
@@ -115,13 +116,13 @@ impl Register {
 
 #[allow(dead_code)]
 pub struct AlertConfig {
-    // Alert Flag bit remain active following a fault until the DIAG_ALRT Register has been read
+    /// Alert Flag bit remain active following a fault until the DIAG_ALRT Register has been read
     pub alert_latch: bool, // 0h = Transparent, 1h = Latched
-    // configures the Alert pin to be asserted when the Conversion Ready Flag (bit 1) is asserted
+    /// Configures the Alert pin to be asserted when the Conversion Ready Flag (bit 1) is asserted
     pub conversion_ready: bool, // 0h = Disable, 1h = Enable conversion ready
-    // delay the ALERT until after the averaged value.
+    /// Delay the ALERT until after the averaged value.
     pub slow_alert: bool, // 0h = ALERT comparison on non-averaged (ADC) value, 1h = ALERT comparison on averaged value
-    // Alert pin polarity
+    /// Alert pin polarity
     pub alert_polarity: bool, // 0h = Normal (Active-low, open-drain), 1h = Inverted (active-high, open-drain )
 }
 
