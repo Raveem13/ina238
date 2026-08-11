@@ -3,7 +3,7 @@
 //! # INA238 driver for embedded-hal
 //! A Rust driver for the INA238 current/voltage/power monitor IC.
 //! This driver is designed to work with the `embedded-hal` traits, making it compatible with a wide range of microcontrollers and platforms.
-//! 
+//!
 //! More about the embedded-hal: <https://docs.rs/embedded-hal/latest/embedded_hal/index.html>
 //!
 //! More about INA238: <https://www.ti.com/product/INA228>
