@@ -12,7 +12,7 @@
 *.uf2
 
 # Documentations
-/Docs
+# /Docs
 
 # Other tests
 /stub_test
