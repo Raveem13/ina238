@@ -254,7 +254,7 @@ where
     }
     /// Power measurement, returns the power in watts.
     pub fn power(&mut self) -> Result<f32, Error<I2C::Error>> {
-        let raw_value = self.read_i24(Register::POWER)?;
+        let raw_value = self.read_u24(Register::POWER)?;
         Ok(raw_value as f32 * 0.2 * self.current_lsb)
     }
 
@@ -409,12 +409,12 @@ where
         }
     }
 
-    fn read_i24(&mut self, reg: u8) -> Result<i32, Error<I2C::Error>> {
+    fn read_u24(&mut self, reg: u8) -> Result<u32, Error<I2C::Error>> {
         let mut buf = [0u8; 3];
         match self.i2c.write_read(self.address.as_u8(), &[reg], &mut buf) {
             Ok(()) => Ok({
                 let bytes = [0, buf[0], buf[1], buf[2]];
-                i32::from_be(i32::from_ne_bytes(bytes))
+                u32::from_ne_bytes(bytes)
             }),
             Err(e) => Err(Error::Communication(e)),
         }
